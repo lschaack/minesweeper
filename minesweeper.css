@@ -1,0 +1,50 @@
+body {
+	background-color: #333333;
+}
+
+#game-area {
+	margin-left: auto;
+	margin-right: auto;
+	width: 80%; /* change later */
+}
+
+.game {
+}
+
+.row {
+	max-width: 1440px;
+	float: left;
+	clear: both;
+}
+
+.square {
+	background-color: #bbb;
+	min-height: 30px;
+	min-width: 30px;
+	border: 3px outset #bbb;
+	float: left;
+	/* for the text inside, might redo this eventually */
+	font-family: monospace;
+	text-align: center;
+	vertical-align: middle;
+	font-size: 20pt;
+	font-weight: bold;
+	line-height: 30px;
+}
+
+.square.default {
+}
+
+.square.flagged {
+}
+
+.square.revealed {
+	border-top: 3px solid #777;
+	border-left: 3px solid #777;
+	border-bottom: 3px solid #bbb;
+	border-right: 3px solid #bbb;
+}
+
+.square.exploded {
+	background-color: #ff0000;
+}
