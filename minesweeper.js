@@ -1,4 +1,11 @@
-// Lucas Schaack
+/* Lucas Schaack
+ * thanks to https://www.martinstoeckli.ch/fontmap/fontmap.html for the easy
+ * 	character set lookup.
+ * TODO:
+ *	1. Make getFlags work
+ *	2. Make opening mines by pressing opened numbered squares work
+ *	3. Create win state by counting number of flags
+ *	   win */
 
 (function() {
 	"use strict";
@@ -11,7 +18,10 @@
 
 	class Minesweeper {
 		constructor(body, width, height, numMines) {
-			this.body = body;
+			/* as long as this.isPlaying is true, the board can be clicked and
+			 * the game continued. false on win or explode */
+			this.isPlaying = true;
+			this.body = body; // maybe not necessary, could just pass to populate()
 			this.width = width;
 			this.height = height;
 			/* this.game is an array of 0s in all spaces except those with
@@ -20,7 +30,9 @@
 			 * accessed as: this.game[(i * this.width) + j] */
 			this.game = new Uint8Array(this.width * this.height);
 			this.numMines = numMines;
-			this.playing = true;
+			this.minesFlagged = 0;
+			this.flagChar = '⚐'; // alternative: ⚑
+			this.mineChar = '✹'; // alternative: ✸
 			
 			this.layMines(this.numMines);
 			this.populate();
@@ -77,30 +89,34 @@
 			 		the game state
 			 *	3. use the internal game state and surroundings to either
 			 		reveal or explode */
-			if (game.playing) { // feels hack-y...
+			if (game.isPlaying) { // feels hack-y...
 				var stringIndex = this.id.split(',');
 				var i = parseInt(stringIndex[0]);
 				var j = parseInt(stringIndex[1]);
 				var thisIndex = game.gameIndex(i, j);
-				// console.log('i = ' + i + ', j = ' + j);
 				// 'i' is the row number, 'j' the column number
 				var squareClass = this.className
-
+				// TODO: rearrange so most common conditional is on top
 				if (squareClass == 'square revealed') {
 					// reveal surrounding mines if every mine is flagged
-					// check if number of surrounding flags is equal to surroundings
-					getFlags(thisIndex);
+					// first, check if num nearby flags equal to num nearby mines
+					var numFlags = game.getFlags(thisIndex);
+					var surroundings = game.getSurroundings(thisIndex);
+					// click on nearby unflagged squares
+					if (numFlags == surroundings) {
+						game.openNumbered(thisIndex);
+					}
 				} else if (squareClass != 'square flagged') { // "ignore outright"
 					this.className = 'square revealed';
 					var isMine = game.game[thisIndex];
 
 					if (isMine) { // "explode"
-						this.innerHTML = '*';
+						this.innerHTML = game.mineChar;
 						this.style.backgroundColor = '#dd0000';
 						game.explode();
 					} else {
 						// surroundings sets innerHTML, but also returns mine count
-						var surroundings = game.revealEmpty(thisIndex); // "just open"
+						var surroundings = game.revealNumbered(thisIndex); // "just open"
 
 						if (!surroundings) { // "open neighboring blanks"
 							game.openBlanks(thisIndex);
@@ -113,9 +129,9 @@
 		/* for revealing a known bomb-less square, sets innerHTML to number of
 		 * immediately surrounding mines, colors according to that number, and
 		 * then returns that number. */
-		revealEmpty(index) {
-			var surroundings = game.getSurroundings(index);
-			var id = game.getIDfromGameIndex(index);
+		revealNumbered(index) {
+			var surroundings = this.getSurroundings(index);
+			var id = game.idFromIndex(index);
 			var element = document.getElementById(id);
 			// set appropriate color
 			switch(surroundings) {
@@ -154,14 +170,14 @@
 		}
 
 		flag() {
-			if (game.playing) { // feels hack-y
+			if (game.isPlaying) { // feels hack-y
 				// check if player has won here eventually...
-				if (this.className != 'square revealed') {
-					this.className = 'square flagged';
-					this.innerHTML = '⚐'; // ⚑
-				} else if (this.className == 'square flagged') { // reset
+				if (this.className == 'square flagged') { // reset
 					this.className = 'square default';
 					this.innerHTML = '';
+				} else if (this.className != 'square revealed') {
+					this.innerHTML = game.flagChar; 
+					this.className = 'square flagged';
 				}
 			}
 
@@ -170,14 +186,14 @@
 
 		explode() {
 			var i;
-			for (i = 0; i < game.game.length; i++) {
-				if (game.game[i]) { // if there's a bomb at game.game[i]
-					var id = game.getIDfromGameIndex(i);
-					document.getElementById(id).innerHTML = '✹'; // ✸
+			for (i = 0; i < this.game.length; i++) {
+				if (this.game[i]) { // if there's a bomb at this.game[i]
+					var id = this.idFromIndex(i);
+					document.getElementById(id).innerHTML = this.mineChar;
 				}
 			}
 
-			game.playing = false;
+			this.isPlaying = false;
 			console.log("~boom~");
 		}
 
@@ -192,7 +208,6 @@
 			 * surroundings if a surrounding value is found to be a bomb. */
 			for (let ii in neighbors) {
 				surroundings += this.game[neighbors[ii]];
-				// console.log("neighbor " + neighbor + " with value " + this.game[neighbor]);
 			}
 
 			return surroundings;
@@ -200,17 +215,20 @@
 
 		/* given a game index, returns the number of flagged squares in the
 		 * immediate surroundings. */
-		getFlags(squareIndex) {
-			neighbors = getNeighborIndices(squareIndex);
-			nFlags = 0;
+		getFlags(index) {
+			var neighbors = game.getNeighborIndices(index);
+			var nFlags = 0;
 
 			for (let ii in neighbors) {
-				neighbor = neighbor[ii];
-				id = getIDfromGameIndex(neighbor);
-				if (document.getElementById(id).innerHTML == 'F') { // if it's a flag
-					// ####################################################################################################
+				var neighbor = neighbors[ii];
+				var id = this.idFromIndex(neighbor);
+				if (document.getElementById(id).className == 'square flagged') {
+					nFlags++;
 				}
 			}
+			console.log('final nFlags = ' + nFlags)
+
+			return nFlags;
 		}
 
 		// run BFS and open all blanks and numbered squares
@@ -221,8 +239,8 @@
 			while (toVisit.length > 0) {
 				var currIndex = toVisit.shift();
 				if (!game.game[currIndex]) { // if no bomb at neighbor index
-					var id = game.getIDfromGameIndex(currIndex);
-					document.getElementById(id).click();
+					var id = game.idFromIndex(currIndex);
+					game.revealSquare(currIndex);
 				}
 
 				var neighbors = game.getNeighborIndices(currIndex);
@@ -231,11 +249,28 @@
 				 * numbered "edges") */
 				for (let ii in neighbors) {
 					var neighbor = neighbors[ii]; // game index of each neighbor
+
 					if (!visited.has(neighbor) && // if not visited...
-						game.getSurroundings(currIndex) == 0) { // if curr also blank
+						this.getSurroundings(currIndex) == 0) { // if curr also blank
+
 						toVisit.push(neighbor);
 						visited.add(neighbor);
 					}
+				}
+			}
+		}
+
+		openNumbered(squareIndex) {
+			var neighbors = game.getNeighborIndices(squareIndex);
+
+			/* maybe make function to apply a function to each neighbor in an
+			 *	array of neighbor indices? seems like I use this loop a lot */
+			for (let ii in neighbors) {
+				var neighbor = neighbors[ii];
+				var neighborElement = document.getElementById(game.idFromIndex(neighbor));
+				// check if neighbor is unflagged
+				if (neighborElement.className == 'square default') {
+					neighborElement.click();
 				}
 			}
 		}
@@ -266,12 +301,30 @@
 			return neighbors;
 		}
 
+		/* helper method for openBlanks, essentially a narrower version of
+		 *	reveal() with no call to openBlanks so that it doesn't infinitely
+		 *	recurse. */
+		revealSquare(index) {
+			var element = document.getElementById(this.idFromIndex(index));
+			element.className = 'square revealed';
+			var isMine = game.game[index];
+
+			if (isMine) { // "explode"
+				element.innerHTML = game.mineChar;
+				element.style.backgroundColor = '#dd0000';
+				game.explode();
+			} else {
+				// surroundings sets innerHTML, but also returns mine count
+				game.revealNumbered(index); // "just open"
+			}
+		}
+
 		/* given a board index (row, col), returns an index for this.game */
 		gameIndex(row, col) {
 			return (row) * this.width +(col);
 		}
 
-		getIDfromGameIndex(gameIndex) {
+		idFromIndex(gameIndex) {
 			var row = Math.floor(gameIndex / this.width);
 			var col = gameIndex % this.width;
 			return row + ',' + col;
