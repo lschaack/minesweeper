@@ -145,18 +145,18 @@ input {
 	line-height: 30px;
 }
 
-.square.default {
+.default { /* might still need .square to start, not sure */
 }
 
-.square.pressed {
+.pressed { /* might still need .square to start, not sure */
 	background-color: #bbb;
 	border: 3px solid #bbb;
 }
 
-.square.flagged {
+.flagged { /* might still need .square to start, not sure */
 }
 
-.square.revealed {
+.revealed { /* might still need .square to start, not sure */
 	border-top: 3px solid #777;
 	border-left: 3px solid #777;
 	border-bottom: 3px solid #bbb;

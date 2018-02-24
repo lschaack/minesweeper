@@ -7,7 +7,10 @@
  *	3. Give falsely-flagged mines different symbol 
  *  ...?. It's becoming increasingly clear that I should just make a square
  			class with some easily-checkable boolean properties instead of
- 			doing all this DOM wrangling. */
+ 			doing all this DOM wrangling. 
+ 		In fact it's becoming clear that none of the handler methods should
+ 			even be within the class structure, as the use of "this" becomes
+ 			a serious problem */
 
 (function() {
 	"use strict";
@@ -31,81 +34,72 @@
 			// counts down based on flags, not correct flags
 			this.mineCounter = document.getElementById('mine-counter');
 			this.face = document.getElementById('face');
+			face.onclick = this.reset;
 			// end elements stored for quick access
 
 			// begin meta game info
 			this.width = width;
 			this.height = height;
-			/* this.game is an array of 0s in all spaces except those with
-			 * mines, whose value is 1. It is, by convention, in row-major
-			 * order, where the value at the 'i'th row and 'j'th column is
-			 * accessed as: this.game[(i * this.width) + j] */
-			this.game = new Uint8Array(this.width * this.height);
 			this.numMines = numMines;
+			this.game = this.constructBoard(this.numMines, this.height, this.width);
 			this.minesFlagged = 0;
 			this.flagChar = '⚐'; // alternative: ⚑
 			this.mineChar = '✹'; // alternative: ✸
 			// end meta game info
 
-			// very broken...
-			// var timer = setInterval(function() {
-			// 	if (game.isPlaying) {
-			// 		var time = game.timeCounter.innerHTML;
-			// 		time = (parseInt(time) + 1).toString();
-			// 		if (time.length < 4) {
-			// 			game.timeCounter.innerHTML = '0'.repeat(3 - time.length) + time;
-			// 		}
-			// 	}
-			// }, 1000);
-
-			// set up game and abstract board representation
-			this.layMines(this.numMines);
-			this.populate();
+			// now start
+			this.setup();
 		}
 
-		/* only affects this.game, populates board with mines represented
-		 * as integer ones in random locations. */
+		setup() {
+
+		}
+
+		/* populates a board with mines represented as integer ones in random locations. */
 		// TODO: make this not loop infinitely if there are more mines that squares
-		layMines(nMines) { // keepgeneral for unfair game modes later :D
+		constructBoard(height, width, nMines) { // keep general for unfair game modes later :D
+			var board = new Uint8Array(height * width);
+			console.log(board)
 			var i;
 			for (i = 0; i < nMines; i++) {
 				var layed = false;
 				// range of mineIndex = [0, gameArea)
 				while (!layed) { // keep trying until layed in empty spot, inefficient...
-					var mineIndex = Math.floor(Math.random() * this.game.length);
-					if (!this.game[mineIndex]) {
-						this.game[mineIndex] = 1;
+					var mineIndex = Math.floor(Math.random() * board.length);
+					if (!board[mineIndex]) {
+						board[mineIndex] = 1;
 						layed = true;
 					}
 				}
 			}
+			console.log(board)
+			return board;
 		}
 
 		// just creates the board dynamically on the DOM
 		populate() {
 			var i, j;
-			var me = this;
 
-			for (i = 0; i < this.width; i++) {
+			for (i = 0; i < this.height; i++) {
 				var row = document.createElement('div');
 				row.className = 'row';
 
-				for (j = 0; j < this.height; j++) {
+				for (j = 0; j < this.width; j++) {
 					var square = document.createElement('div');
 					square.onmousedown = function() {
-						if (this.isPlaying && this.className == 'square default') {
-							this.className = 'square pressed';
+						if (this.isPlaying && this.className == 'default') {
+							this.className = 'pressed';
 						}
 					}
 					square.onmouseup = function() {
-						if (this.isPlaying && this.className == 'square pressed') {
-							this.className = 'square default';
+						if (this.isPlaying && this.className == 'pressed') {
+							this.className = 'default';
 						}
 					}
 					square.onclick = this.reveal;
 					square.oncontextmenu = this.flag;
 					square.id = i + ',' + j;
-					square.className = 'square default';
+					square.className = 'default';
 					row.appendChild(square);
 				}
 
@@ -137,7 +131,7 @@
 				// 'i' is the row number, 'j' the column number
 				var squareClass = this.className
 				// TODO: rearrange so most common conditional is on top
-				if (squareClass == 'square revealed') {
+				if (squareClass == 'revealed') {
 					// reveal surrounding mines if every mine is flagged
 					// first, check if num nearby flags equal to num nearby mines
 					var numFlags = game.getFlags(thisIndex);
@@ -146,8 +140,8 @@
 					if (numFlags == surroundings) {
 						game.openNumbered(thisIndex);
 					}
-				} else if (squareClass != 'square flagged') { // "ignore outright"
-					this.className = 'square revealed';
+				} else if (squareClass != 'flagged') { // "ignore outright"
+					this.className = 'revealed';
 					var isMine = game.game[thisIndex];
 
 					if (isMine) { // "explode"
@@ -212,14 +206,14 @@
 		flag() {
 			if (game.isPlaying) { // feels hack-y
 				// check if player has won here eventually...
-				if (this.className == 'square default') {
-					this.className = 'square flagged';
+				if (this.className == 'default') {
+					this.className = 'flagged';
 					this.innerHTML = game.flagChar; 
-				} else if (this.className == 'square flagged') {
+				} else if (this.className == 'flagged') {
 					if (this.innerHTML == game.flagChar) {
 						this.innerHTML = '?';
 					} else {
-						this.className = 'square default';
+						this.className = 'default';
 						this.innerHTML = '';
 					}
 				}
@@ -273,7 +267,7 @@
 			for (let ii in neighbors) {
 				var neighbor = neighbors[ii];
 				var id = this.idFromIndex(neighbor);
-				if (document.getElementById(id).className == 'square flagged') {
+				if (document.getElementById(id).className == 'flagged') {
 					nFlags++;
 				}
 			}
@@ -319,7 +313,7 @@
 				var neighbor = neighbors[ii];
 				var neighborElement = document.getElementById(game.idFromIndex(neighbor));
 				// check if neighbor is unflagged
-				if (neighborElement.className == 'square default') {
+				if (neighborElement.className == 'default') {
 					neighborElement.click();
 				}
 			}
@@ -356,7 +350,7 @@
 		 *	recurse. */
 		revealSquare(index) {
 			var element = document.getElementById(this.idFromIndex(index));
-			element.className = 'square revealed';
+			element.className = 'revealed';
 			var isMine = game.game[index];
 
 			if (isMine) { // "explode"
@@ -379,30 +373,54 @@
 			var col = gameIndex % this.width;
 			return row + ',' + col;
 		}
+
+		reset() {
+			game.isPlaying = false;
+			while(game.body.firstChild) {
+				game.body.removeChild(game.body.firstChild);
+			}
+
+			var boxWidth = document.getElementById('width').value;
+			var boxHeight = document.getElementById('height').value;
+			var numMines = document.getElementById('mines').value;
+
+			game.width = parseInt(boxWidth);
+			game.height = parseInt(boxHeight);
+			game.numMines = parseInt(numMines);
+			// "erase" game board
+			game.game = game.constructBoard();
+			game.populate();
+			game.isPlaying = true;
+		}
+
+		grabSquare(row, col) {
+
+		}
+	}
+
+	class Square() {
+		constructor(row, col) {
+			this.row = row;
+			this.col = col;
+			this.isMine = false;
+			this.isFlagged = false;
+			this.isQuestioned = false;
+		}
+
+		layMine() {
+			this.isMine = true;
+		}
+
+		flag() {
+			this.isFlag = true;
+		}
 	}
 
 	window.onload = function() {
-		document.getElementById('minesweeper-face').onclick = resetGame;
-		game = resetGame();
-	};
-
-	/* Seems preferrable to do this based on a return statement but not sure how
-	 *	to reset global game in the context of an event listener. Might require
-	 *	a pretty serious reworking of how this all works? Who knows. */
-	function resetGame() {
 		var gameBody = document.getElementById('game-body');
-		// remove existing game if there
-		while(gameBody.firstChild) {
-			gameBody.removeChild(gameBody.firstChild);
-		}
 		var boxWidth = document.getElementById('width').value;
 		var boxHeight = document.getElementById('height').value;
 		var numMines = document.getElementById('mines').value;
-		boxWidth = parseInt(boxWidth);
-		boxHeight = parseInt(boxHeight);
-		numMines = parseInt(numMines);
-		game = new Minesweeper(gameBody, boxWidth, boxHeight, numMines);
-
-		return game;
-	}
+		game = new Minesweeper(gameBody, boxHeight, boxWidth, numMines);
+	};
 })();
