@@ -5,9 +5,10 @@ body {
 }
 
 input {
-	display: inline;
-	float: left;
-	width: 50%;
+	font-family: "Courier New", monospace;
+	font-size: 12pt;
+	width: 40px;
+	margin: 10px;
 }
 
 #center {
@@ -16,36 +17,59 @@ input {
 }
 
 #game-area {
-	padding = 0px;
+	width: 50%;
+	margin: auto;
 }
 
 /************** Game header **************/
-/* totally not sure why game-header doesn't meet at the bottom with game-body... */
+
 #game-header {
+	position: relative; /* for proper dropdown display */
 	background-color: #bbb;
-	height: 50px;
+	height: 55px;
 	border: 3px outset #bbb;
-	padding: 5px;
+	padding-top: 10px;
+	padding-left: 3%;
+	padding-right: 3%;
 	font-family: monospace;
 	box-sizing: border-box; /* for making sure header stays within game area */
 	width: inherit;
 }
 
-#settings-area {
-	/*background-color: #111;*/
+.settings-dropdown {
+	font-size: 20pt;
 	float: left;
-	height: 95%;
-	width: 20%;
 	text-align: left;
+	width: 10%;
+}
+
+.settings-content {
+	font-size: 12pt;
+	position: absolute;
+	background-color: #bbb;
+	padding: 10px;
+	left: -0.3%;
+	border: 3px ridge #777;
+	z-index: 1;
+	display: none;
+}
+
+.settings-content div {
+	float: left;
+	clear: left;
+}
+
+.settings-content p {
+	float: left;
+}
+
+.settings-dropdown:hover .settings-content {
+	display: block;
 }
 
 #info {
-	position: relative;
-	top: 10%;
-	left: 11%;
-	width: 60%;
-	margin-left: auto;
-	margin-right: auto;
+	width: 120px; /* keep static for centering at all widths */
+	margin: auto;
 }
 
 /* begin info inner */
@@ -53,7 +77,8 @@ input {
 #time-elapsed {
 	background-color: black;
 	float: left;
-	width: auto;
+	height: 30px;
+	display: inline-block;
 }
 
 #time-counter {
@@ -61,32 +86,31 @@ input {
 	text-align: center;
 	color: red;
 	margin: 3px;
-	height: inherit;
-	/*box-sizing: border-box;*/
 }
 
 #minesweeper-face {
 	float: left;
-	min-width: 25px;
 	text-align: center;
 	border: 3px outset #bbb;
 	position: relative;
-	bottom: 1px;
-	height: inherit;
-	/*box-sizing: border-box;*/
+	box-sizing: border-box;
+	height: 30px;
+	width: 30px;
+	padding: 0px;
+	display: inline-block;
 }
 
 #face {
 	text-align: center;
 	margin: 0px;
-	margin-top: 3px;
-	margin-bottom: 5px;
+	margin-top: 5px;
 }
 
 #mines-remaining {
 	background-color: black;
 	float: left;
-	width: auto;
+	height: 30px;
+	display: inline-block;
 }
 
 #mine-counter {
@@ -94,36 +118,22 @@ input {
 	text-align: center;
 	color: red;
 	margin: 3px;
-	height: inherit;
-	/*box-sizing: border-box;*/
 }
 
 /* end info inner */
 
 #flag-mode {
-	/*background-color: #aaa;*/
 	float: right;
-	width: 20%;
-	text-align: center;
-	height: 95%;
-	font-size: 20pt;
-	/*box-sizing: border-box;*/
 }
 
 #flag-mode p {
+	font-size: 20pt;
+	text-align: right;
 	margin: 0px;
-	margin-top: 5px;
+	margin-top: 3px;
 }
 
 /************** Game space ***************/
-
-#game-body {
-	
-}
-
-.game { /* probably not necessary to keep around at this point */
-
-}
 
 .row {
 	float: left;
@@ -132,12 +142,11 @@ input {
 
 .square {
 	background-color: #bbb;
-	height: 30px; /* maybe make these min-height later for better screen adaptability? */
-	width: 30px;  /* maybe make these min-width later for better screen adaptability? */
-	border: 3px outset #bbb;
+	height: 30px;
+	width: 30px;
 	float: left;
 	/* for the text inside, might redo this eventually */
-	font-family: monospace;
+	font-family: "Courier New", monospace;
 	text-align: center;
 	vertical-align: middle;
 	font-size: 20pt;
@@ -145,18 +154,15 @@ input {
 	line-height: 30px;
 }
 
-.square.default { /* might still need .square to start, not sure */
+.square.default {
+	border: 3px outset #bbb;
 }
 
-.square.pressed { /* might still need .square to start, not sure */
-	background-color: #bbb;
+.square.pressed {
 	border: 3px solid #bbb;
 }
 
-.square.flagged { /* might still need .square to start, not sure */
-}
-
-.square.revealed { /* might still need .square to start, not sure */
+.square.revealed {
 	border-top: 3px solid #777;
 	border-left: 3px solid #777;
 	border-bottom: 3px solid #bbb;
@@ -165,4 +171,5 @@ input {
 
 .square.exploded {
 	background-color: #d00;
+	border: 3px inset #bbb;
 }

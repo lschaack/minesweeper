@@ -1,33 +1,38 @@
 /* Lucas Schaack
- * thanks to https://www.martinstoeckli.ch/fontmap/fontmap.html for the easy
+ * thanks to https: https://www.martinstoeckli.ch/fontmap/fontmap.html for the easy
  * 	character set lookup.
  * TODO:
- *	1. Create win state by counting number of flags
- *	2. Check win condition at end of reveal() and flag() methods
- *	3. Give falsely-flagged mines different symbol 
- *  ...?. It's becoming increasingly clear that I should just make a square
- 			class with some easily-checkable boolean properties instead of
- 			doing all this DOM wrangling. 
- 		In fact it's becoming clear that none of the handler methods should
- 			even be within the class structure, as the use of "this" becomes
- 			a serious problem */
+ *	1. Create win state
+ *	2. Timers
+ *	3. Different faces */
 
 (function() {
 	"use strict";
 
 	const SQUARE_WIDTH_PX = 36; // 30 for square plus 6 for border on either side
 	const MINE_CHAR = '✹'; // alternative: ✸
-	const FLAG_CHAR = '⚐'; // alternative: ⚑
+	const FLAG_CHAR = '⚐';
+	const FLAG_CHAR_SOLID = '⚑';
 	var game; // seems unsafe, but I think I need this to replace 'this' for event handlers
 	var timer;
 
 	/* The manager for Board and Square, works with the DOM */
 	class Minesweeper {
-		constructor(body, width, height, numMines) {
-			// begin conditionals which affect functionality
-			/* as long as this.isPlaying is true, the board can be clicked and
-			 * the game continued. false on win or explode */
-			this.isPlaying = false; // togglePlaying() method to set this and dis/reenable clicking/timer?
+		constructor(body, height, width, numMines) {
+			/* I think I need to declare all these here for global access within
+			 * the class, but not totally sure. */
+			// conditionals which affect functionality
+			this.flagMode;
+			// elements stored for quick access
+			this.body, this.timeCounter, this.mineCounter;
+			// meta game info
+			this.width, this.height, this.numMines, this.minesFlagged, this.board;
+
+			this.reset(body, height, width, numMines);
+		}
+
+		reset(body, height, width, numMines) {
+			// begin conditionals which affect functionality (there used to be more)
 			this.flagMode = false;
 			// end conditionals
 
@@ -36,8 +41,6 @@
 			this.timeCounter = document.getElementById('time-counter');
 			// counts down based on flags, not correct flags
 			this.mineCounter = document.getElementById('mine-counter');
-			this.face = document.getElementById('face');
-			face.onclick = this.reset;
 			// end elements stored for quick access
 
 			// begin meta game info
@@ -47,20 +50,29 @@
 			this.minesFlagged = 0;
 			// end meta game info
 
+			// remove nodes if there are any
+			while(this.body.firstChild) {
+				this.body.removeChild(this.body.firstChild);
+			}
+
 			// do setup
 			this.populate(); // set up html representation
 			this.board = new Board(this.height, this.width); // set up abstract representation
 			this.layMines();
 
 			// all ready
-			this.isPlaying = true;
+			this.body.style.pointerEvents = "auto"; // enable clicking if disabled
 		}
 
-		// TODO: make this not loop infinitely if there are more mines that squares
 		layMines() {
+			var area = this.height * this.width;
+			console.assert(this.numMines <= area,
+				"Number of mines greater than board area. Please take it easy on the mines.");
+
+			var minesToLay = Math.min(this.numMines, area);
 			var i;
 			
-			for (i = 0; i < this.numMines; i++) { 
+			for (i = 0; i < minesToLay; i++) { 
 				var layed = false;
 
 				while (!layed) { // keep trying until layed in empty spot, inefficient...
@@ -93,24 +105,38 @@
 
 				for (j = 0; j < this.width; j++) {
 					var square = document.createElement('div');
+
 					square.onmousedown = function() {
-						if (this.isPlaying && this.className == 'square default') {
+						if (this.className == 'square default') {
 							this.className = 'square pressed';
 						}
 					}
+
 					square.onmouseup = function() {
-						if (this.isPlaying && this.className == 'square pressed') {
+						if (this.className == 'square pressed') {
 							this.className = 'square default';
 						}
 					}
+
 					square.onclick = reveal;
-					square.oncontextmenu = flag;
+					square.oncontextmenu = flag; 
 					square.id = i + ',' + j;
 					square.className = 'square default';
 					row.appendChild(square);
 				}
 
 				this.body.appendChild(row);
+			}
+
+			// this doesn't really fit nicely anywhere, so it goes here
+			document.getElementById('flag-mode').onclick = function() {
+				game.flagMode = !game.flagMode; // toggle
+
+				if (game.flagMode) {
+					this.firstChild.innerHTML = FLAG_CHAR_SOLID;
+				} else {
+					this.firstChild.innerHTML = FLAG_CHAR;
+				}
 			}
 
 			// set style for everything to fit together nicely
@@ -144,22 +170,29 @@
 		}
 
 		explode() {
-			var i;
-			for (i = 0; i < this.game.length; i++) {
-				var id = this.idFromIndex(i);
-				var element = document.getElementById(id);
+			// try to make everything unclickable
+			this.body.style.pointerEvents = "none";
 
-				if (this.game[i]) { // if there's a bomb at this.game[i]
-					if (element.innerHTML != this.flagChar) {
-						element.innerHTML = this.mineChar;
+			var i, j;
+
+			// length method instead of property to ensure correct behavior
+			for (i = 0; i < this.height; i++) {
+				for (j = 0; j < this.width; j++) {
+					var square = this.board.get(i, j);
+
+					if (square.isMine && !square.isFlagged) { // false negative
+						var id = this.idFromBoard(i, j);
+						document.getElementById(id).innerHTML = MINE_CHAR;
+					} else if (!square.isMine && square.isFlagged) { // false positive
+						var id = this.idFromBoard(i, j);
+						var element = document.getElementById(id);
+						element.innerHTML = FLAG_CHAR_SOLID;
+						// set flag color to slightly darker than standard red
+						element.style.color = '#d00';
 					}
-				} else if (element.innerHTML == this.flagChar) {
-					element.innerHTML = this.mineChar;
-					element.style.color = '#d00';
 				}
 			}
 
-			this.isPlaying = false;
 			console.log("~boom~");
 		}
 
@@ -178,6 +211,9 @@
 			return nFlags;
 		}
 
+		/* Performs BFS to open all contiguous blanks surrounding an initial
+		 * mine given by row and column index on the board, stopping whenever
+		 * it encounters a numbered edge. */
 		openBlanks(row, col) {
 			var toVisit = [this.board.get(row, col)]; // push() and shift() for FIFO behavior
 			var visited = new Set();
@@ -205,6 +241,7 @@
 			}
 		}
 
+		/* Clicks on all squares surrounding a */
 		openNumbered(row, col) {
 			var square = this.board.get(row, col);
 
@@ -226,25 +263,6 @@
 
 		idFromBoard(row, col) {
 			return row + ',' + col;
-		}
-
-		reset() {
-			game.isPlaying = false;
-			while(game.body.firstChild) {
-				game.body.removeChild(game.body.firstChild);
-			}
-
-			var boxWidth = document.getElementById('width').value;
-			var boxHeight = document.getElementById('height').value;
-			var numMines = document.getElementById('mines').value;
-
-			game.width = parseInt(boxWidth);
-			game.height = parseInt(boxHeight);
-			game.numMines = parseInt(numMines);
-			// "erase" game board
-			game.game = game.constructBoard();
-			game.populate();
-			game.isPlaying = true;
 		}
 	}
 
@@ -354,6 +372,7 @@
 	}
 
 	window.onload = function() {
+		document.getElementById('face').onclick = reset;
 		var gameBody = document.getElementById('game-body');
 		var boxWidth = document.getElementById('width').value;
 		var boxHeight = document.getElementById('height').value;
@@ -367,19 +386,29 @@
 		3. If square is numbered, just open
 		4. If square is blank, open all surrounding blank squares */
 	function reveal(doOpenBlanks = true, doOpenNumbered = true) {
-		if (game.isPlaying) {
-			var stringIndex = this.id.split(',');
-			var row = parseInt(stringIndex[0]);
-			var col = parseInt(stringIndex[1]);
-			var id = game.idFromBoard(row, col);
+		var stringIndex = this.id.split(',');
+		var row = parseInt(stringIndex[0]);
+		var col = parseInt(stringIndex[1]);
+		var id = game.idFromBoard(row, col);
 
-			var square = game.board.get(row, col);
-			var element = document.getElementById(id);
+		var square = game.board.get(row, col);
+		var element = document.getElementById(id);
+
+		/* sort of a weird conditional...if I just checked for flag mode and whether
+		 * the square is open, then doOpenBlanks and doOpenNumbered would click
+		 * surrounding squares as usual, which would flag them. this is a slightly
+		 * hack-y but I think pretty nice workaround which implicitly checks whether
+		 * the call is coming from one of those methods. */
+		if (game.flagMode && !square.isOpen && doOpenBlanks && doOpenNumbered) {
+			var boundFlag = flag.bind(this);
+			boundFlag();
+		} else {
 			var result = square.open();
 
 			// set appropriate html classes etc.
 			switch(result) {
 				case 'blank':
+					square.isOpen = true;
 					element.className = 'square revealed';
 					// BFS
 					if (doOpenBlanks) {
@@ -403,36 +432,46 @@
 					element.innerHTML = MINE_CHAR;
 					game.explode();
 					break;
-			}
+			}	
 		}
 	}
 
 	function flag() {
-		if (game.isPlaying) {
-			var stringIndex = this.id.split(',');
-			var row = parseInt(stringIndex[0]);
-			var col = parseInt(stringIndex[1]);
-			var id = game.idFromBoard(row, col);
+		var stringIndex = this.id.split(',');
+		var row = parseInt(stringIndex[0]);
+		var col = parseInt(stringIndex[1]);
+		var id = game.idFromBoard(row, col);
 
-			var squareOnBoard = game.board.get(row, col);
-			var squareElement = document.getElementById(id);
+		var squareOnBoard = game.board.get(row, col);
+		var squareElement = document.getElementById(id);
 
+		if (!squareOnBoard.isOpen) {
 			if (squareOnBoard.isFlagged) {
 				squareOnBoard.isFlagged = false;
 				squareOnBoard.isQuestioned = true;
-				squareElement.className = 'square flagged';
+
 				squareElement.innerHTML = '?';
 			} else if (squareOnBoard.isQuestioned) {
 				squareOnBoard.isQuestioned = false;
-				squareOnBoard.isFlagged = true;
+				squareOnBoard.isFlagged = false;
+
 				squareElement.innerHTML = '';
 			} else { // neither flagged nor questioned
 				squareOnBoard.isFlagged = true;
+
 				squareElement.className = 'square default';
 				squareElement.innerHTML = FLAG_CHAR;
 			}
 		}
 
 		return false; // to suppress context menu
+	}
+
+	function reset() {
+		var gameBody = document.getElementById('game-body');
+		var boxWidth = document.getElementById('width').value;
+		var boxHeight = document.getElementById('height').value;
+		var numMines = document.getElementById('mines').value;
+		game.reset(gameBody, boxHeight, boxWidth, numMines);
 	}
 })();
