@@ -8,28 +8,27 @@
 	</head>
 
 	<body>
-		<div id="center">
-			<div id="game-area">
-				<div id="game-header">
-					<div class="settings-dropdown">
-						<span>≡</span> <!-- all decent possibilities: ⋮, ⋯, ≡, ≣ -->
-						<div class="settings-content">
-							<div><p>Width:</p> <input type="number" id="width" name="width" min="5", max="30", value="16"></div>
-							<div><p>Height:</p> <input type="number" id="height" name="height" min="2", max="30", value="16"></div>
-							<div><p>Mines:</p> <input type="number" id="mines" name="mines" min="2", max="300", value="40"></div>
-						</div>
-					</div> 
-
-					<div id="info">
-						<div id="time-elapsed"><p id="time-counter">000</p></div>
-						<div id="minesweeper-face"><p id="face">:|</p></div>
-						<div id="mines-remaining"><p id="mine-counter">000</p></div>	
+		<div id="game-area">
+			<div id="game-header">
+				<div class="settings-dropdown">
+					<span>≡</span> <!-- all decent possibilities: ⋮, ⋯, ≡, ≣ -->
+					<div class="settings-content">
+						<div><p>Width:</p> <input type="number" id="width" name="width" min="5", max="30", value="16"></div>
+						<div><p>Height:</p> <input type="number" id="height" name="height" min="5", max="30", value="16"></div>
+						<div><p>Mines:</p> <input type="number" id="mines" name="mines" min="2", max="300", value="40"></div>
 					</div>
+				</div> 
 
-					<div id="flag-mode"><p>⚐</p></div>
+				<div id="info">
+					<div id="time-elapsed"><p id="time-counter">000</p></div>
+					<div class="default" id="minesweeper-face"><p id="face">:|</p></div>
+					<div id="mines-remaining"><p id="mine-counter">000</p></div>	
 				</div>
-				<div id="game-body" class="game"></div>
+
+				<div id="flag-mode"><p>⚐</p></div>
 			</div>
+			<div id="message" class="default"><p></p></div>
+			<div id="game-body" class="game"></div>
 		</div>
 	</body>
 </html>

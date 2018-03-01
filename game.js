@@ -13,7 +13,9 @@
 	const MINE_CHAR = '✹'; // alternative: ✸
 	const FLAG_CHAR = '⚐';
 	const FLAG_CHAR_SOLID = '⚑';
-	var game; // seems unsafe, but I think I need this to replace 'this' for event handlers
+	const DEFAULT_MESSAGE = 'You win!';
+	var game;
+	var counter;
 	var timer;
 
 	/* The manager for Board and Square, works with the DOM */
@@ -32,21 +34,22 @@
 		}
 
 		reset(body, height, width, numMines) {
+			hideMessage();
 			// begin conditionals which affect functionality (there used to be more)
 			this.flagMode = false;
 			// end conditionals
 
 			// begin elements stored for quick access
 			this.body = body; // maybe not necessary, could just pass to populate()
-			this.timeCounter = document.getElementById('time-counter');
-			// counts down based on flags, not correct flags
 			this.mineCounter = document.getElementById('mine-counter');
+			this.timeCounter = document.getElementById('time-counter');
 			// end elements stored for quick access
 
 			// begin meta game info
 			this.width = width;
 			this.height = height;
 			this.numMines = numMines;
+			this.numFlags = 0;
 			this.minesFlagged = 0;
 			// end meta game info
 
@@ -56,6 +59,7 @@
 			}
 
 			// do setup
+			updateMineCounter(this.numMines);
 			this.populate(); // set up html representation
 			this.board = new Board(this.height, this.width); // set up abstract representation
 			this.layMines();
@@ -106,18 +110,8 @@
 				for (j = 0; j < this.width; j++) {
 					var square = document.createElement('div');
 
-					square.onmousedown = function() {
-						if (this.className == 'square default') {
-							this.className = 'square pressed';
-						}
-					}
-
-					square.onmouseup = function() {
-						if (this.className == 'square pressed') {
-							this.className = 'square default';
-						}
-					}
-
+					square.onmousedown = buttonPress;
+					square.onmouseup = buttonPress;
 					square.onclick = reveal;
 					square.oncontextmenu = flag; 
 					square.id = i + ',' + j;
@@ -142,6 +136,10 @@
 			// set style for everything to fit together nicely
 			var nPix = this.width * SQUARE_WIDTH_PX;
 			document.getElementById('game-area').style.width = nPix + "px";
+			// lower bound: 180px, 
+			// upper bound: 1080px, want 48px
+			message = document.getElementById('message').firstChild;
+			message.style.fontSize = 1 + 0.005 * nPix + 'em';
 		}
 
 		/* just yields a string representing a color, given the number of mines
@@ -170,7 +168,7 @@
 		}
 
 		explode() {
-			// try to make everything unclickable
+			// make everything unclickable
 			this.body.style.pointerEvents = "none";
 
 			var i, j;
@@ -193,7 +191,35 @@
 				}
 			}
 
+			showMessage("~*boom*~");
 			console.log("~boom~");
+		}
+
+		checkWin() {
+			if (this.minesFlagged == this.numMines && this.minesFlagged == this.numFlags) {
+				var i, j;
+				// loop through and check every square is either flagged or opened
+				for (i = 0; i < this.height; i++) {
+					for (j = 0; j < this.width; j++) {
+						var square = this.board.get(i, j);
+
+						if (!square.isOpen && !square.isFlagged) {
+							return false;
+						}
+					}
+				}
+
+				this.win();
+				return true;
+			}
+		}
+
+		win(message) {
+			// make everything unclickable
+			this.body.style.pointerEvents = "none";
+
+			console.log("~hooray~");
+			showMessage(DEFAULT_MESSAGE);
 		}
 
 		/* given a board index, returns the number of flagged squares in the
@@ -369,10 +395,30 @@
 				}
 			}
 		}
+
+		flag() {
+			if (this.isMine) {
+				if (!this.isFlagged && !this.isQuestioned) {
+					return 'increment'; // increment mineCounter if correct
+				} else if (this.isFlagged) {
+					return 'decrement'; // decrement if correct but de-flagged
+				}
+			} else { // I don't really do anything with this right now
+				return 'nop';
+			}
+		}
 	}
 
 	window.onload = function() {
-		document.getElementById('face').onclick = reset;
+		counter = document.getElementById('mine-counter');
+
+		var resetButton = document.getElementById('minesweeper-face');
+		// redo the css later to make following line + buttonPress work
+		resetButton.className = 'default';
+		resetButton.onclick = reset;
+		resetButton.onmousedown = buttonPress;
+		resetButton.onmouseup = buttonPress;
+
 		var gameBody = document.getElementById('game-body');
 		var boxWidth = document.getElementById('width').value;
 		var boxHeight = document.getElementById('height').value;
@@ -434,6 +480,8 @@
 					break;
 			}	
 		}
+
+		game.checkWin();
 	}
 
 	function flag() {
@@ -444,24 +492,45 @@
 
 		var squareOnBoard = game.board.get(row, col);
 		var squareElement = document.getElementById(id);
+		var result = squareOnBoard.flag();
 
+		/* Update game.minesFlagged first--separate b/c minesFlagged counts the
+		 * number of mines correctly flagged for easy win checking, vs. the HTML
+		 * counter which just decrements based on the number of flags on the board */
+		switch(result) {
+			case 'increment':
+				game.minesFlagged++;
+				break;
+			case 'decrement':
+				game.minesFlagged--;
+				break;
+		}
+
+		// Rotate between FLAG_CHAR, ?, and blank, and toggle corresponding bools
 		if (!squareOnBoard.isOpen) {
-			if (squareOnBoard.isFlagged) {
+			if (squareOnBoard.isFlagged) { 				// if flag, become question
+				game.numFlags--;
 				squareOnBoard.isFlagged = false;
 				squareOnBoard.isQuestioned = true;
 
 				squareElement.innerHTML = '?';
-			} else if (squareOnBoard.isQuestioned) {
+				updateMineCounter(game.numMines - game.numFlags);
+			} else if (squareOnBoard.isQuestioned) { 	// if question, become default
 				squareOnBoard.isQuestioned = false;
 				squareOnBoard.isFlagged = false;
 
-				squareElement.innerHTML = '';
-			} else { // neither flagged nor questioned
+				squareElement.innerHTML = ''; 
+			} else { 									// if default, become flag
+				game.numFlags++;
 				squareOnBoard.isFlagged = true;
 
-				squareElement.className = 'square default';
 				squareElement.innerHTML = FLAG_CHAR;
+				updateMineCounter(game.numMines - game.numFlags);
 			}
+		}
+
+		if (game.minesFlagged == game.numMines) {
+			game.checkWin();
 		}
 
 		return false; // to suppress context menu
@@ -473,5 +542,32 @@
 		var boxHeight = document.getElementById('height').value;
 		var numMines = document.getElementById('mines').value;
 		game.reset(gameBody, boxHeight, boxWidth, numMines);
+	}
+
+	function buttonPress() {
+		if (this.classList.contains('default')) {
+			this.classList.remove('default')
+			this.classList.add('pressed');
+		} else if (this.classList.contains('pressed')) {
+			this.classList.remove('pressed')
+			this.classList.add('default');
+		}
+	}
+
+	/* Transforms and updates number on mineCounter */
+	function updateMineCounter(update) {
+		var update = update.toString();
+		counter.innerHTML = '0'.repeat(3 - update.length) + update;
+	}
+
+	function showMessage(message) {
+		var messageElement = document.getElementById('message');
+		messageElement.firstChild.innerHTML = message;
+		messageElement.style.display = 'block';
+	}
+
+	function hideMessage() {
+		var messageElement = document.getElementById('message');
+		messageElement.style.display = 'none';
 	}
 })();
