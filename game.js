@@ -2,9 +2,7 @@
  * thanks to https: https://www.martinstoeckli.ch/fontmap/fontmap.html for the easy
  * 	character set lookup.
  * TODO:
- *	1. Create win state
- *	2. Timers
- *	3. Different faces */
+ *	1. Different faces, surprisingly difficult... */
 
 (function() {
 	"use strict";
@@ -14,35 +12,46 @@
 	const FLAG_CHAR = '⚐';
 	const FLAG_CHAR_SOLID = '⚑';
 	const DEFAULT_MESSAGE = 'You win!';
-	var game;
-	var counter;
-	var timer;
+	var isPlaying = false;	// Says whether to update time
+	var game; 				// Holds the Minesweeper class
+	var counter; 			// DOM element storage for quick access (flag counter)
+	var timer; 				// DOM element storage for quick access (timer, obviously)
+	var startTime;			// Holds the time of the first board click
+
+	/* ###################################################################### */
+	/* ############################### Classes ############################## */
+	/* ###################################################################### */
 
 	/* The manager for Board and Square, works with the DOM */
 	class Minesweeper {
 		constructor(body, height, width, numMines) {
-			/* I think I need to declare all these here for global access within
-			 * the class, but not totally sure. */
 			// conditionals which affect functionality
-			this.flagMode;
+			this.flagMode = false;
 			// elements stored for quick access
-			this.body, this.timeCounter, this.mineCounter;
+			this.body, this.mineCounter;
 			// meta game info
 			this.width, this.height, this.numMines, this.minesFlagged, this.board;
 
 			this.reset(body, height, width, numMines);
 		}
 
+		/* Resets the game */
 		reset(body, height, width, numMines) {
 			hideMessage();
-			// begin conditionals which affect functionality (there used to be more)
-			this.flagMode = false;
+			// begin conditionals which affect game functionality
+			// reset timer if set
+			isPlaying = false;
+			document.getElementById('time-counter').innerHTML = '000';
+
+			// resets flagmode it if starting from reset button click
+			if (this.flagMode) {
+				document.getElementById('flag-mode').click();
+			}
 			// end conditionals
 
 			// begin elements stored for quick access
 			this.body = body; // maybe not necessary, could just pass to populate()
 			this.mineCounter = document.getElementById('mine-counter');
-			this.timeCounter = document.getElementById('time-counter');
 			// end elements stored for quick access
 
 			// begin meta game info
@@ -68,6 +77,8 @@
 			this.body.style.pointerEvents = "auto"; // enable clicking if disabled
 		}
 
+		/* Lays mines and increments the surroundings property of each surrounding
+		 * square for every mine layed */
 		layMines() {
 			var area = this.height * this.width;
 			console.assert(this.numMines <= area,
@@ -99,7 +110,7 @@
 			}
 		}
 
-		// just creates the board dynamically on the DOM
+		/* Creates the board dynamically on the DOM */
 		populate() {
 			var i, j;
 
@@ -110,12 +121,12 @@
 				for (j = 0; j < this.width; j++) {
 					var square = document.createElement('div');
 
-					square.onmousedown = buttonPress;
-					square.onmouseup = buttonPress;
+					// square.onmousedown = buttonPress;
+					// square.onmouseup = buttonPress;
 					square.onclick = reveal;
 					square.oncontextmenu = flag; 
 					square.id = i + ',' + j;
-					square.className = 'square default';
+					square.className = 'square';
 					row.appendChild(square);
 				}
 
@@ -136,10 +147,10 @@
 			// set style for everything to fit together nicely
 			var nPix = this.width * SQUARE_WIDTH_PX;
 			document.getElementById('game-area').style.width = nPix + "px";
-			// lower bound: 180px, 
-			// upper bound: 1080px, want 48px
 			message = document.getElementById('message').firstChild;
+			// Start pretty big, get bigger but not by that much much
 			message.style.fontSize = 1 + 0.005 * nPix + 'em';
+			setFace(':|');
 		}
 
 		/* just yields a string representing a color, given the number of mines
@@ -154,7 +165,7 @@
 					return 'red';
 				case 4:
 					return 'purple';
-				case 5:
+				case 5: // 4 and 5 are almost identical on my screen...
 					return 'maroon';
 				case 6:
 					return 'turquoise';
@@ -167,9 +178,13 @@
 			}
 		}
 
+		/* Makes board unclickable, sets appropriate flags, and shows the player
+		 * false negative squares as black mines and false positive squares as
+		 * red solid flags */
 		explode() {
 			// make everything unclickable
 			this.body.style.pointerEvents = "none";
+			isPlaying = false;
 
 			var i, j;
 
@@ -191,10 +206,13 @@
 				}
 			}
 
+			setFace('D:');
 			showMessage("~*boom*~");
 			console.log("~boom~");
 		}
 
+		/* Checks the win condition, returning whether or not the conditions are
+		 * met and also setting the game to the win state if they are */
 		checkWin() {
 			if (this.minesFlagged == this.numMines && this.minesFlagged == this.numFlags) {
 				var i, j;
@@ -209,17 +227,21 @@
 					}
 				}
 
-				this.win();
+				this.win(DEFAULT_MESSAGE);
 				return true;
 			}
 		}
 
+		/* Makes board unclickable, sets appropriate flags, and prints the
+		 * given message underneath the game header */
 		win(message) {
 			// make everything unclickable
 			this.body.style.pointerEvents = "none";
+			isPlaying = false;
 
+			setFace(':D');
+			showMessage(message);
 			console.log("~hooray~");
-			showMessage(DEFAULT_MESSAGE);
 		}
 
 		/* given a board index, returns the number of flagged squares in the
@@ -267,7 +289,7 @@
 			}
 		}
 
-		/* Clicks on all squares surrounding a */
+		/* Clicks on all squares surrounding the square at [row, col] */
 		openNumbered(row, col) {
 			var square = this.board.get(row, col);
 
@@ -287,6 +309,7 @@
 			}
 		}
 
+		/* Returns a string containing the id of the square at [row, col] */
 		idFromBoard(row, col) {
 			return row + ',' + col;
 		}
@@ -300,6 +323,7 @@
 			this.board = this.buildBoard();
 		}
 
+		/* Constructs and returns an array of Square() objects */
 		buildBoard() {
 			var board = new Array(this.height * this.width);
 			var i, j;
@@ -341,6 +365,7 @@
 			return row * this.width + col;
 		}
 
+		/* Returns the Square() object at the board index [row, col] */
 		get(row, col) {
 			return this.board[this.boardIndex(row, col)];
 		}
@@ -362,6 +387,7 @@
 		}
 	}
 
+	/* Represents all the information contained in a single square on the board */
 	class Square {
 		constructor(row, col) {
 			this.row = row;
@@ -373,14 +399,18 @@
 			this.surroundings = 0;
 		}
 
+		/* Named purely for abstraction purposes */
 		layMine() {
 			this.isMine = true;
 		}
 
+		/* Named purely for abstraction purposes */
 		flag() {
 			this.isFlag = true;
 		}
 
+		/* Returns a string representing which operation to perform based on the
+		 * actual contents of the square */
 		open() {
 			if (!this.isFlagged && !this.isQuestioned) {
 				if (this.isMine) {
@@ -396,6 +426,8 @@
 			}
 		}
 
+		/* Returns a string representing which operation to perform based on the
+		 * actual contents of the square */
 		flag() {
 			if (this.isMine) {
 				if (!this.isFlagged && !this.isQuestioned) {
@@ -409,24 +441,11 @@
 		}
 	}
 
-	window.onload = function() {
-		counter = document.getElementById('mine-counter');
+	/* ###################################################################### */
+	/* ########################### Global Methods ########################### */
+	/* ###################################################################### */
 
-		var resetButton = document.getElementById('minesweeper-face');
-		// redo the css later to make following line + buttonPress work
-		resetButton.className = 'default';
-		resetButton.onclick = reset;
-		resetButton.onmousedown = buttonPress;
-		resetButton.onmouseup = buttonPress;
-
-		var gameBody = document.getElementById('game-body');
-		var boxWidth = document.getElementById('width').value;
-		var boxHeight = document.getElementById('height').value;
-		var numMines = document.getElementById('mines').value;
-		game = new Minesweeper(gameBody, boxHeight, boxWidth, numMines);
-	};
-
-	/* This functions has several behaviors dependent on case:
+	/* Several behaviors dependent on case:
 		1. If square is flagged, ignore outright 
 		2. If square is a bomb, explode
 		3. If square is numbered, just open
@@ -439,6 +458,11 @@
 
 		var square = game.board.get(row, col);
 		var element = document.getElementById(id);
+
+		if (!isPlaying) {
+			isPlaying = true
+			updateTime(true);
+		}
 
 		/* sort of a weird conditional...if I just checked for flag mode and whether
 		 * the square is open, then doOpenBlanks and doOpenNumbered would click
@@ -484,6 +508,8 @@
 		game.checkWin();
 	}
 
+	/* Rotates square between default, flagged, and questioned, setting html and
+	 * counters appropriately */
 	function flag() {
 		var stringIndex = this.id.split(',');
 		var row = parseInt(stringIndex[0]);
@@ -493,6 +519,11 @@
 		var squareOnBoard = game.board.get(row, col);
 		var squareElement = document.getElementById(id);
 		var result = squareOnBoard.flag();
+
+		if (!isPlaying) {
+			isPlaying = true
+			updateTime(start = true);
+		}
 
 		/* Update game.minesFlagged first--separate b/c minesFlagged counts the
 		 * number of mines correctly flagged for easy win checking, vs. the HTML
@@ -536,6 +567,7 @@
 		return false; // to suppress context menu
 	}
 
+	/* Resets the game... */
 	function reset() {
 		var gameBody = document.getElementById('game-body');
 		var boxWidth = document.getElementById('width').value;
@@ -544,6 +576,7 @@
 		game.reset(gameBody, boxHeight, boxWidth, numMines);
 	}
 
+	/* Deprecated by simpler and more functional css square:active */
 	function buttonPress() {
 		if (this.classList.contains('default')) {
 			this.classList.remove('default')
@@ -560,14 +593,58 @@
 		counter.innerHTML = '0'.repeat(3 - update.length) + update;
 	}
 
+	/* Called every 1 second, prints the time since the first reveal or flag to
+	 * the timer until the game is won or lost */
+	function updateTime(start = false) {
+		switch(start) { // switch for stepping through from start
+			case true: // initialize
+				startTime = Date.now();
+			default:
+				if (isPlaying) { // actually start
+					// time in seconds to string
+					var secsPassed = ((Date.now() - startTime) / 1000).toString();
+					var update = secsPassed.substring(0, secsPassed.indexOf('.'));
+					if (update.length < 4) {
+						timer.innerHTML = '0'.repeat(3 - update.length) + update;
+					}
+				}
+				break;
+		}
+	}
+
+	/* Sets the reset button face */
+	function setFace(face) {
+		document.getElementById('face').innerHTML = face;
+	}
+
+	/* Shows given message directly underneath game header */
 	function showMessage(message) {
 		var messageElement = document.getElementById('message');
 		messageElement.firstChild.innerHTML = message;
 		messageElement.style.display = 'block';
 	}
 
+	/* Hides the win or lose message */
 	function hideMessage() {
 		var messageElement = document.getElementById('message');
 		messageElement.style.display = 'none';
 	}
+
+	window.onload = function() {
+		counter = document.getElementById('mine-counter');
+		timer = document.getElementById('time-counter');
+		setInterval(updateTime, 1000); // doesn't need a variable, cause it always runs
+
+		var resetButton = document.getElementById('minesweeper-face');
+		resetButton.onclick = reset;
+		// These prevent onclick unless clicked outside the face for some reason...
+		// resetButton.onmousedown = function() { setFace('D8') };
+		// resetButton.onmouseup = function() { setFace(':|') };
+
+		var gameBody = document.getElementById('game-body');
+		var boxWidth = document.getElementById('width').value;
+		var boxHeight = document.getElementById('height').value;
+		var numMines = document.getElementById('mines').value;
+		game = new Minesweeper(gameBody, boxHeight, boxWidth, numMines);
+	};
 })();

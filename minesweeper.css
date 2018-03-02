@@ -1,74 +1,72 @@
 body {
 	background-color: #333333;
-	/*font-size: 20pt;*/
-	font-family: "Courier New", monospace;
+	font-family: "Courier New", "Courier", monospace;
 }
 
 input {
-	font-family: "Courier New", monospace;
 	font-size: 12pt;
 	width: 40px;
 	margin: 10px;
 }
 
 #game-area {
+	background-color: #bbb;
+	/* centering */
 	position: absolute;
 	left: 50%;
 	transform: translateX(-50%);
 }
 
 #message {
-	width: inherit;
 	display: none;
-	box-sizing: border-box;
+	border-left: 3px inset #bbb;
+	border-top: 3px inset #bbb;
+	box-sizing: border-box; /* in case I want to add a border later */
 }
 
 #message p {
-	margin: 0px;
-	padding: 5px;
-
 	color: #d00;
 	font-weight: bolder;
 	font-variant: small-caps;
 	/*text-shadow: 0px 0px 3px blue;*/
 	text-align: center;
+
+	margin: 0px;
+	padding: 5px;
 }
 
 /************** Game header **************/
 
 #game-header {
-	position: relative; /* for proper dropdown display */
-	background-color: #bbb;
-	height: 55px;
 	border: 3px outset #bbb;
+	
+	position: relative; /* for proper dropdown display */
 	padding-top: 10px;
 	padding-left: 3%;
 	padding-right: 3%;
-	font-family: monospace;
+	height: 55px;
 	box-sizing: border-box; /* for making sure header stays within game area */
-	width: inherit;
 }
 
 .settings-dropdown {
 	font-size: 20pt;
 	float: left;
-	text-align: left;
-	width: 10%;
 }
 
 .settings-content {
 	font-size: 12pt;
-	position: absolute;
+
 	background-color: #bbb;
-	padding: 10px;
-	left: -0.3%;
 	border: 3px ridge #777;
+
+	padding: 10px;
+	position: absolute;
+	left: -0.3%;
 	z-index: 2; /* so win-message doesn't overlap */
 	display: none;
 }
 
 .settings-content div {
-	float: left;
 	clear: left;
 }
 
@@ -81,20 +79,20 @@ input {
 }
 
 #info {
-	width: 120px; /* keep static for centering at all widths */
-	margin: auto;
+	/* centering */
+	position: absolute;
+	left: 50%;
+	transform: translateX(-50%);
 }
 
 /* begin info inner */
-
-#time-elapsed {
+.counter-container {
 	background-color: black;
 	float: left;
 	height: 30px;
-	display: inline-block;
 }
 
-#time-counter {
+.counter {
 	font-size: 20px;
 	text-align: center;
 	color: red;
@@ -102,34 +100,16 @@ input {
 }
 
 #minesweeper-face {
-	float: left;
-	text-align: center;
-	position: relative;
 	box-sizing: border-box;
-	height: 30px;
-	width: 30px;
-	padding: 0px;
-	display: inline-block;
 }
 
 #face {
+	font-size: 12pt;
+	line-height: 10pt;
 	text-align: center;
+
 	margin: 0px;
 	margin-top: 5px;
-}
-
-#mines-remaining {
-	background-color: black;
-	float: left;
-	height: 30px;
-	display: inline-block;
-}
-
-#mine-counter {
-	font-size: 20px;
-	text-align: center;
-	color: red;
-	margin: 3px;
 }
 
 /* end info inner */
@@ -140,9 +120,9 @@ input {
 
 #flag-mode p {
 	font-size: 20pt;
-	text-align: right;
+
 	margin: 0px;
-	margin-top: 3px;
+	line-height: 24pt;
 }
 
 /************** Game space ***************/
@@ -153,36 +133,33 @@ input {
 }
 
 .square {
-	background-color: #bbb;
-	height: 30px;
-	width: 30px;
-	float: left;
-	/* for the text inside, might redo this eventually */
-	font-family: "Courier New", monospace;
+	/* styling */
 	text-align: center;
 	vertical-align: middle;
 	font-size: 20pt;
 	font-weight: bold;
 	line-height: 30px;
-}
 
-.default {
-	background-color: #bbb;
 	border: 3px outset #bbb;
+
+	/* display */
+	height: 30px;
+	width: 30px;
+	float: left;
 }
 
-.pressed {
+.square:active {
 	border: 3px inset #bbb;
 }
 
-.square.revealed {
+.revealed {
 	border-top: 3px solid #777;
 	border-left: 3px solid #777;
 	border-bottom: 3px solid #bbb;
 	border-right: 3px solid #bbb;
 }
 
-.square.exploded {
+.exploded {
 	background-color: #d00;
 	border: 3px inset #bbb;
 }
