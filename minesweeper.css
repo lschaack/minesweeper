@@ -110,6 +110,7 @@ input {
 
 	margin: 0px;
 	margin-top: 5px;
+	pointer-events: none;
 }
 
 /* end info inner */

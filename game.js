@@ -1,8 +1,6 @@
 /* Lucas Schaack
  * thanks to https: https://www.martinstoeckli.ch/fontmap/fontmap.html for the easy
- * 	character set lookup.
- * TODO:
- *	1. Different faces, surprisingly difficult... */
+ * 	character set lookup. */
 
 (function() {
 	"use strict";
@@ -121,8 +119,8 @@
 				for (j = 0; j < this.width; j++) {
 					var square = document.createElement('div');
 
-					// square.onmousedown = buttonPress;
-					// square.onmouseup = buttonPress;
+					square.onmousedown = function() { setFace('o:') }; // buttonPress;
+					square.onmouseup = function() { setFace('|:') }; // buttonPress;
 					square.onclick = reveal;
 					square.oncontextmenu = flag; 
 					square.id = i + ',' + j;
@@ -150,7 +148,7 @@
 			message = document.getElementById('message').firstChild;
 			// Start pretty big, get bigger but not by that much much
 			message.style.fontSize = 1 + 0.005 * nPix + 'em';
-			setFace(':|');
+			setFace('|:');
 		}
 
 		/* just yields a string representing a color, given the number of mines
@@ -638,8 +636,8 @@
 		var resetButton = document.getElementById('minesweeper-face');
 		resetButton.onclick = reset;
 		// These prevent onclick unless clicked outside the face for some reason...
-		// resetButton.onmousedown = function() { setFace('D8') };
-		// resetButton.onmouseup = function() { setFace(':|') };
+		resetButton.onmousedown = function() { setFace('D8') };
+		resetButton.onmouseup = function() { setFace('|:') };
 
 		var gameBody = document.getElementById('game-body');
 		var boxWidth = document.getElementById('width').value;
