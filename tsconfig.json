@@ -1,0 +1,16 @@
+{
+    "compilerOptions": {
+        "module": "commonjs",
+        "noImplicitAny": true,
+        "removeComments": true,
+        "preserveConstEnums": true,
+        // "sourceMap": true,
+        "alwaysStrict": true,
+        "target": "es5",
+        "lib": ["es5", "es6", "dom"]
+    },
+    "files": [
+        "game.ts",
+        "minesweeper.ts"
+    ]
+}
